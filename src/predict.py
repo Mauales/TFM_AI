@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.utils import CustomObjectScope
 from tqdm import tqdm
 from data import load_data, tf_dataset
-from New_Loss import *
+from new_metrics import *
 from cadis_visualization import *
 
 IMG_SIZE = (128,128)
@@ -40,16 +40,16 @@ if __name__ == "__main__":
     if len(test_x) % batch_size != 0:
         test_steps += 1
 
-    with CustomObjectScope({'IoULoss': IoULoss}):
+    with CustomObjectScope({'my_mIoU': my_mIoU}):
         model = tf.keras.models.load_model("files/model.h5")
 
-    model.evaluate(test_dataset, steps=test_steps)
+    #model.evaluate(test_dataset, steps=test_steps)
 
     for i, (x, y) in tqdm(enumerate(zip(test_x, test_y)), total=len(test_x)):
         if i % 20 == 0:
             x = read_image(x)
             y = read_mask(y)
             y_pred = model.predict(np.expand_dims(x, axis=0))[0]
-            y_pred = tf.argmax(y_pred,2).numpy()
+            y_pred = tf.argmax(y_pred,-1).numpy()
             plot = plot_experiment(x, y_pred, 1, False)
             plot.savefig("./files/test"+ str(i)+".png")

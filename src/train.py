@@ -1,11 +1,10 @@
-import os
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, CSVLogger, TensorBoard
 from data import load_data, tf_dataset
 import model as basic_model
 import model_pretrained as pret_model
-from New_Loss import *
+from new_loss import *
+from new_metrics import *
 
 if __name__ == "__main__":
     ## Dataset
@@ -17,7 +16,7 @@ if __name__ == "__main__":
     ## Hyperparameters
     batch = 32
     lr = 1e-4
-    epochs = 10
+    epochs = 20
     train_dataset = tf_dataset(train_x, train_y, batch, shuffle= True, augment= True)
     valid_dataset = tf_dataset(valid_x, valid_y, batch)
 
@@ -27,7 +26,7 @@ if __name__ == "__main__":
 
     model.compile(optimizer='adam',
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-                  metrics=['sparse_categorical_accuracy'])
+                  metrics=['sparse_categorical_accuracy', my_mIoU])
 
     callbacks = [
           ModelCheckpoint("files/model.h5"),

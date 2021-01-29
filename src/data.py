@@ -1,6 +1,5 @@
 from cadis_visualization import *
 import tensorflow as tf
-import random
 import os
 
 
@@ -96,13 +95,12 @@ def tf_dataset(x, y, batch_size = 8, shuffle = False, augment = False):
 
     # Use data augmentation only on the training set
     if augment:
-        dataset = dataset.map(lambda x, y: (random_right_left_flip(x,y)),
+        dataset = dataset.map(random_right_left_flip,
                     num_parallel_calls=AUTOTUNE)
 
     # Use buffered prefecting on all datasets
     return dataset.prefetch(buffer_size=AUTOTUNE)
 
-def random_right_left_flip(x,y, prob = 0.5):
-    if random.uniform(0, 1) > prob:
-        return tf.image.flip_left_right(x), tf.image.flip_left_right(y)
-    return x, y
+def random_right_left_flip(x,y):
+    choice = tf.random.uniform(shape=[], minval=0., maxval=1., dtype=tf.float32)
+    return tf.cond(choice < 0.5, lambda: (tf.image.flip_left_right(x), tf.image.flip_left_right(y)), lambda: (x,y))
