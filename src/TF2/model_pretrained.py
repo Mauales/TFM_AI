@@ -64,14 +64,3 @@ def build_model(num_classes = 8, img_size =(256,256,3)):
     x = last(x)
 
     return tf.keras.Model(inputs=inputs, outputs=x)
-
-def create_mask(pred_mask):
-    pred_mask = tf.argmax(pred_mask, axis=-1)
-    pred_mask = pred_mask[..., tf.newaxis]
-    return pred_mask[0]
-
-def show_predictions(model,dataset=None, num=1):
-    for image, mask in dataset.take(num):
-        pred_mask = model.predict(image)[0]
-        good_mask = create_mask(pred_mask)
-        display([image[0], mask[0], good_mask])

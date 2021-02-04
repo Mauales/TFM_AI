@@ -9,6 +9,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+src/Pytorch-UNet/runs/*
 .Python
 build/
 develop-eggs/

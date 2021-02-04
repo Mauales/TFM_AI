@@ -1,5 +1,6 @@
 from cadis_visualization import *
 import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import os
 
 
@@ -51,7 +52,6 @@ def read_image(path):
     x = x / 255.0
     return x
 
-
 def read_mask(path):
     path = path.decode()
     x = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -59,7 +59,6 @@ def read_mask(path):
     x = cv2.resize(x, IMG_SIZE)
     x = x / 1.0
     return x
-
 
 def tf_parse(x, y):
     def _parse(x, y):
@@ -72,7 +71,6 @@ def tf_parse(x, y):
     y.set_shape(IMG_SIZE)
     return x, y
 
-
 def load_data(path=r"C:\Users\mauro\OneDrive\Escritorio\CaDISv2"):
     splits = load_params(path)
     train_x, train_y = get_ImagesBySet("Training", splits)
@@ -81,11 +79,11 @@ def load_data(path=r"C:\Users\mauro\OneDrive\Escritorio\CaDISv2"):
 
     return (train_x, train_y), (valid_x, valid_y), (test_x, test_y)
 
-def tf_dataset(x, y, batch_size = 8, shuffle = False, augment = False):
+def tf_dataset(x, y, batch_size = 8, shuffle = True, augment = False):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     dataset = tf.data.Dataset.from_tensor_slices((x, y))
-    dataset = dataset.map(tf_parse)
+    dataset = dataset.map(tf_parse,num_parallel_calls=AUTOTUNE)
 
     if shuffle:
         dataset = dataset.shuffle(1000)
@@ -95,12 +93,12 @@ def tf_dataset(x, y, batch_size = 8, shuffle = False, augment = False):
 
     # Use data augmentation only on the training set
     if augment:
-        dataset = dataset.map(random_right_left_flip,
-                    num_parallel_calls=AUTOTUNE)
+        dataset = dataset.map(random_right_left_flip,num_parallel_calls=AUTOTUNE)
 
     # Use buffered prefecting on all datasets
     return dataset.prefetch(buffer_size=AUTOTUNE)
 
+@tf.function
 def random_right_left_flip(x,y):
     choice = tf.random.uniform(shape=[], minval=0., maxval=1., dtype=tf.float32)
     return tf.cond(choice < 0.5, lambda: (tf.image.flip_left_right(x), tf.image.flip_left_right(y)), lambda: (x,y))

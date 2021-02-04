@@ -71,7 +71,6 @@ def remap_mask(mask, class_remapping, ignore_label=255):
         for cls in val:
             classes.append(cls)
     assert len(classes) == len(set(classes))
-
     N = max(len(classes), mask.max() + 1)
     remap_array = np.full(N, ignore_label, dtype=np.uint8)
     for key, val in class_remapping.items():

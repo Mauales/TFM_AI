@@ -40,10 +40,14 @@ if __name__ == "__main__":
     if len(test_x) % batch_size != 0:
         test_steps += 1
 
-    with CustomObjectScope({'my_mIoU': my_mIoU}):
-        model = tf.keras.models.load_model("files/model.h5")
+    model = tf.keras.models.load_model("files/model.h5", compile=False)
 
-    #model.evaluate(test_dataset, steps=test_steps)
+    mIoU = new_mIoU()
+    model.compile(optimizer='adam',
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+                  metrics=['sparse_categorical_accuracy', mIoU])
+
+    model.evaluate(test_dataset, steps=test_steps)
 
     for i, (x, y) in tqdm(enumerate(zip(test_x, test_y)), total=len(test_x)):
         if i % 20 == 0:
