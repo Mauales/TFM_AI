@@ -153,7 +153,7 @@ def plot_images(img, remapped_mask, remapped_colormap, classes_exp, isRemapped =
     return fig
 
 
-def remap_experiment1(mask):
+def remap_experiment1(mask, colormapOnly = False):
     """Remap mask for Experiment I"""
     class_remapping_exp = {
         0: [0],
@@ -193,7 +193,7 @@ def remap_experiment1(mask):
             33,
             34,
             35,
-        ],
+        ]
     }
 
     classes_exp = {
@@ -204,10 +204,12 @@ def remap_experiment1(mask):
         4: "Iris",
         5: "Skin",
         6: "Cornea",
-        7: "Instrument",
+        7: "Instrument"
     }
 
     colormap = get_remapped_colormap(class_remapping_exp)
+    if colormapOnly:
+        return colormap
     remapped_mask = remap_mask(mask, class_remapping=class_remapping_exp)
     return remapped_mask, classes_exp, colormap
 

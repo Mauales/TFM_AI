@@ -16,8 +16,8 @@ from torch.utils.tensorboard import SummaryWriter
 from utils.dataset import BasicDataset
 from torch.utils.data import DataLoader, random_split
 
-dir_img = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2/*/Images/*"
-dir_mask = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2/*/Labels/*"
+dir_img = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2/Video01/Images/*"
+dir_mask = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2/Video01/Labels/*"
 dir_checkpoint = 'checkpoints/'
 
 
@@ -25,7 +25,7 @@ def train_net(net,
               device,
               epochs=5,
               batch_size=1,
-              lr=0.0001,
+              lr=0.001,
               val_percent=0.1,
               save_cp=True,
               img_scale=0.5):
@@ -50,9 +50,8 @@ def train_net(net,
         Device:          {device.type}
         Images scaling:  {img_scale}
     ''')
-
-    #optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
     optimizer = optim.Adam(net.parameters(),lr=lr)
+    #optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min' if net.n_classes > 1 else 'max', patience=2)
     if net.n_classes > 1:
         criterion = nn.CrossEntropyLoss()
@@ -74,10 +73,11 @@ def train_net(net,
 
                 imgs = imgs.to(device=device, dtype=torch.float32)
                 mask_type = torch.float32 if net.n_classes == 1 else torch.long
-                true_masks = true_masks.to(device=device, dtype=mask_type)
                 true_masks = true_masks.squeeze(1)
+                true_masks = true_masks.to(device=device, dtype=mask_type)
 
                 masks_pred = net(imgs)
+                #print(true_masks.max())
                 loss = criterion(masks_pred, true_masks)
                 epoch_loss += loss.item()
                 writer.add_scalar('Loss/train', loss.item(), global_step)
@@ -91,7 +91,7 @@ def train_net(net,
 
                 pbar.update(imgs.shape[0])
                 global_step += 1
-                if global_step % (n_train // (5 * batch_size)) == 0:
+                if global_step % (n_train // (10 * batch_size)) == 0:
                     for tag, value in net.named_parameters():
                         tag = tag.replace('.', '/')
                         writer.add_histogram('weights/' + tag, value.data.cpu().numpy(), global_step)
@@ -128,11 +128,11 @@ def train_net(net,
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=5,
+    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=1,
                         help='Number of epochs', dest='epochs')
     parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=2,
                         help='Batch size', dest='batchsize')
-    parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.0001,
+    parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.00001,
                         help='Learning rate', dest='lr')
     parser.add_argument('-f', '--load', dest='load', type=str, default=False,
                         help='Load model from a .pth file')
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     #   - For 1 class and background, use n_classes=1
     #   - For 2 classes, use n_classes=1
     #   - For N > 2 classes, use n_classes=N
-    net = UNet(n_channels=3, n_classes=8, bilinear=True)
+    net = UNet(n_channels=3, n_classes=9, bilinear=True)
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
                  f'\t{net.n_classes} output channels (classes)\n'

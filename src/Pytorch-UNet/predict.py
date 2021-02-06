@@ -32,12 +32,11 @@ def predict_img(net,
 
         if net.n_classes > 1:
             probs = F.softmax(output, dim=1)
+            probs = torch.argmax(probs,dim=1)
         else:
             probs = torch.sigmoid(output)
 
-        probs = torch.argmax(probs,dim=1)
-
-        full_mask = probs.squeeze(0)
+        full_mask = torch.squeeze(probs)
 
     return full_mask.cpu()
 
@@ -45,7 +44,7 @@ def predict_img(net,
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model', '-m', default='./checkpoints/CP_epoch4.pth',
+    parser.add_argument('--model', '-m', default='./checkpoints/CP_epoch1.pth',
                         metavar='FILE',
                         help="Specify the file in which the model is stored")
     parser.add_argument('--input', '-i', metavar='INPUT', nargs='+',
@@ -91,7 +90,7 @@ if __name__ == "__main__":
     in_files = args.input
     out_files = get_output_filenames(args)
 
-    net = UNet(n_channels=3, n_classes=8)
+    net = UNet(n_channels=3, n_classes=9)
 
     logging.info("Loading model {}".format(args.model))
 
@@ -105,7 +104,7 @@ if __name__ == "__main__":
     for i, fn in enumerate(in_files):
         logging.info("\nPredicting image {} ...".format(fn))
 
-        img = Image.open(fn)
+        img = Image.open(fn).convert('RGB')
 
         mask = predict_img(net=net,
                            full_img=img,
@@ -114,12 +113,12 @@ if __name__ == "__main__":
                            device=device)
 
         # CHW to HWC
-        _, _, colormap = remap_experiment1(mask)
+        colormap = remap_experiment1(mask, True)
         mask = mask_to_colormap(mask,colormap)
 
         if not args.no_save:
             out_fn = out_files[i].split("/")[-1].split(".")[0]
-            plt.imsave("./output/" + out_fn + ".png",mask)
+            plt.imsave("./output/" + out_fn + ".png", mask)
 
             logging.info("Mask saved to {}".format(out_files[i]))
 

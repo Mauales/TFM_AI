@@ -6,7 +6,6 @@ import torch
 from torch.utils.data import Dataset
 import logging
 from PIL import Image
-import cv2
 from .cadis_visualization import *
 
 
@@ -25,7 +24,7 @@ class BasicDataset(Dataset):
         return len(self.ids)
 
     @classmethod
-    def preprocess(cls, pil_img, scale, isImage = True):
+    def preprocess(cls, pil_img, scale, isMask = False):
         w, h = pil_img.size
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small'
@@ -36,14 +35,12 @@ class BasicDataset(Dataset):
         if len(img_nd.shape) == 2:
             img_nd = np.expand_dims(img_nd, axis=2)
 
-        if img_nd.max() > 1 and isImage:
-            img_nd = img_nd / 255
-        if not isImage:
-            img_nd , _ , _ = remap_experiment1(img_nd)
-
         # HWC to CHW
         img_trans = img_nd.transpose((2, 0, 1))
-
+        if not isMask:
+            img_trans = img_trans / 255
+        else:
+            img_trans,_,_ = remap_experiment1(img_trans)
         return img_trans
 
     def __getitem__(self, i):
@@ -55,14 +52,14 @@ class BasicDataset(Dataset):
             f'Either no mask or multiple masks found for the ID {idx}: {mask_file}'
         assert len(img_file) == 1, \
             f'Either no image or multiple images found for the ID {idx}: {img_file}'
-        mask = Image.open(mask_file[0])
-        img = Image.open(img_file[0])
+        mask = Image.open(mask_file[0]).convert('L')
+        img = Image.open(img_file[0]).convert('RGB')
 
         assert img.size == mask.size, \
             f'Image and mask {idx} should be the same size, but are {img.size} and {mask.size}'
 
         img = self.preprocess(img, self.scale)
-        mask = self.preprocess(mask, self.scale,False)
+        mask = self.preprocess(mask, self.scale, True)
 
         return {
             'image': torch.from_numpy(img).type(torch.FloatTensor),
