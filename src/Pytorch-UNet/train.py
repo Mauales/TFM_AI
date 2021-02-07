@@ -15,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 from utils.dataset import BasicDataset, load_params
 from torch.utils.data import DataLoader
 from utils.cadis_visualization import *
-from utils.metric.iou import Metrics
+from utils.metric.metrics import Metrics
 
 base = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2"
 dir_img = "/Images/*"

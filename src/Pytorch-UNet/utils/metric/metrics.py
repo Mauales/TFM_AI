@@ -1,10 +1,8 @@
-import torch
 import numpy as np
-from .metric import Metric
-from .confusionmatrix import ConfusionMatrix
+from confusionmatrix import ConfusionMatrix
 
 
-class Metrics(Metric):
+class Metrics:
     """Computes the intersection over union (IoU) per class and corresponding
     mean (mIoU).
 
