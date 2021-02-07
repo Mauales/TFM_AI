@@ -119,8 +119,8 @@ def plot_images(img, remapped_mask, remapped_colormap, classes_exp, isRemapped =
     :param experiment: experimental setup
     :return: plot of image and rgb mask with class colorbar
     """
-    if isRemapped:
-        mask_rgb = mask_to_colormap(remapped_mask, colormap=remapped_colormap)
+
+    mask_rgb = mask_to_colormap(remapped_mask, colormap=remapped_colormap)
 
     fig, axs = plt.subplots(1, 2, figsize=(26, 7))
     plt.subplots_adjust(left=1 / 16.0, right=1 - 1 / 16.0, bottom=1 / 8.0, top=1 - 1 / 8.0)
@@ -209,7 +209,7 @@ def remap_experiment1(mask, colormapOnly = False):
 
     colormap = get_remapped_colormap(class_remapping_exp)
     if colormapOnly:
-        return colormap
+        return colormap, classes_exp
     remapped_mask = remap_mask(mask, class_remapping=class_remapping_exp)
     return remapped_mask, classes_exp, colormap
 

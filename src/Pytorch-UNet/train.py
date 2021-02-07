@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch import optim
@@ -13,11 +12,14 @@ from eval import eval_net
 from unet import UNet
 
 from torch.utils.tensorboard import SummaryWriter
-from utils.dataset import BasicDataset
-from torch.utils.data import DataLoader, random_split
+from utils.dataset import BasicDataset, load_params
+from torch.utils.data import DataLoader
+from utils.cadis_visualization import *
+from utils.metric.iou import Metrics
 
-dir_img = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2/Video01/Images/*"
-dir_mask = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2/Video01/Labels/*"
+base = "C:/Users/mauro/OneDrive/Escritorio/CaDISv2"
+dir_img = "/Images/*"
+dir_mask = "/Labels/*"
 dir_checkpoint = 'checkpoints/'
 
 
@@ -26,14 +28,21 @@ def train_net(net,
               epochs=5,
               batch_size=1,
               lr=0.001,
-              val_percent=0.1,
               save_cp=True,
               img_scale=0.5):
 
-    dataset = BasicDataset(dir_img, dir_mask, img_scale)
-    n_val = int(len(dataset) * val_percent)
-    n_train = len(dataset) - n_val
-    train, val = random_split(dataset, [n_train, n_val])
+    splits = load_params(base)
+    train_imgs = [x + dir_img for x in splits["Training"]]
+    train_masks = [x + dir_mask for x in splits["Training"]]
+    val_imgs = [x + dir_img for x in splits["Validation"]]
+    val_masks = [x + dir_mask for x in splits["Validation"]]
+
+    train = BasicDataset(train_imgs, train_masks , img_scale)
+    val = BasicDataset(val_imgs, val_masks, img_scale)
+
+    n_train = len(train)
+    n_val = len(val)
+
     train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True, drop_last=True)
 
@@ -51,17 +60,20 @@ def train_net(net,
         Images scaling:  {img_scale}
     ''')
     optimizer = optim.Adam(net.parameters(),lr=lr)
-    #optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
+
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min' if net.n_classes > 1 else 'max', patience=2)
     if net.n_classes > 1:
         criterion = nn.CrossEntropyLoss()
     else:
         criterion = nn.BCEWithLogitsLoss()
 
+    metrics = Metrics(net.n_classes)
+
     for epoch in range(epochs):
         net.train()
 
         epoch_loss = 0
+
         with tqdm(total=n_train, desc=f'Epoch {epoch + 1}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 imgs = batch['image']
@@ -77,8 +89,11 @@ def train_net(net,
                 true_masks = true_masks.to(device=device, dtype=mask_type)
 
                 masks_pred = net(imgs)
-                #print(true_masks.max())
                 loss = criterion(masks_pred, true_masks)
+
+                #IoU, mIoU and accuracy
+                metrics.add(masks_pred.detach(), true_masks.detach())
+
                 epoch_loss += loss.item()
                 writer.add_scalar('Loss/train', loss.item(), global_step)
 
@@ -91,7 +106,15 @@ def train_net(net,
 
                 pbar.update(imgs.shape[0])
                 global_step += 1
-                if global_step % (n_train // (10 * batch_size)) == 0:
+                if global_step % (n_train // (5 * batch_size)) == 0 or global_step == 2:
+
+                    (class_Iou, mIou, glob_Iou) = metrics.get_IoU()
+                    (pa, pac, mpac) = metrics.get_accuracy()
+                    print('Epoch {}'.format(epoch),
+                          "Training IoU: %.3f" % glob_Iou,
+                          "mIou: %.3f" % mIou,
+                          "PA: %.3f" % pa,
+                          "mPAC: %.3f" % mpac)
                     for tag, value in net.named_parameters():
                         tag = tag.replace('.', '/')
                         writer.add_histogram('weights/' + tag, value.data.cpu().numpy(), global_step)
@@ -128,18 +151,16 @@ def train_net(net,
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=1,
+    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=5,
                         help='Number of epochs', dest='epochs')
     parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=2,
                         help='Batch size', dest='batchsize')
-    parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.00001,
+    parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.0001,
                         help='Learning rate', dest='lr')
     parser.add_argument('-f', '--load', dest='load', type=str, default=False,
                         help='Load model from a .pth file')
     parser.add_argument('-s', '--scale', dest='scale', type=float, default=0.5,
                         help='Downscaling factor of the images')
-    parser.add_argument('-v', '--validation', dest='val', type=float, default=10.0,
-                        help='Percent of the data that is used as validation (0-100)')
 
     return parser.parse_args()
 
@@ -156,7 +177,7 @@ if __name__ == '__main__':
     #   - For 1 class and background, use n_classes=1
     #   - For 2 classes, use n_classes=1
     #   - For N > 2 classes, use n_classes=N
-    net = UNet(n_channels=3, n_classes=9, bilinear=True)
+    net = UNet(n_channels=3, n_classes=8, bilinear=True)
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
                  f'\t{net.n_classes} output channels (classes)\n'
@@ -178,8 +199,7 @@ if __name__ == '__main__':
                   batch_size=args.batchsize,
                   lr=args.lr,
                   device=device,
-                  img_scale=args.scale,
-                  val_percent=args.val / 100)
+                  img_scale=args.scale)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')
