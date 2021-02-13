@@ -62,9 +62,6 @@ optional arguments:
   -f LOAD, --load LOAD  Load model from a .pth file (default: False)
   -s SCALE, --scale SCALE
                         Downscaling factor of the images (default: 0.5)
-  -v VAL, --validation VAL
-                        Percent of the data that is used as validation (0-100)
-                        (default: 15.0)
 
 ```
 By default, the `scale` is 0.5, so if you wish to obtain better results (but use more memory), set it to 1.
