@@ -1,11 +1,11 @@
 CUDNN:
-  BENCHMARK: true
+  BENCHMARK: false
   DETERMINISTIC: false
-  ENABLED: true
-GPUS: (0)
+  ENABLED: false
+GPUS: (0,)
 OUTPUT_DIR: 'output'
 LOG_DIR: 'log'
-WORKERS: 4
+WORKERS: 1
 PRINT_FREQ: 100
 
 DATASET:
@@ -24,48 +24,48 @@ MODEL:
       NUM_RANCHES: 1
       BLOCK: BOTTLENECK
       NUM_BLOCKS:
-      - 4
+      - 1
       NUM_CHANNELS:
-      - 64
+      - 32
       FUSE_METHOD: SUM
     STAGE2:
       NUM_MODULES: 1
       NUM_BRANCHES: 2
       BLOCK: BASIC
       NUM_BLOCKS:
-      - 4
-      - 4
+      - 2
+      - 2
       NUM_CHANNELS:
-      - 48
-      - 96
+      - 16
+      - 32
       FUSE_METHOD: SUM
     STAGE3:
-      NUM_MODULES: 4
+      NUM_MODULES: 1
       NUM_BRANCHES: 3
       BLOCK: BASIC
       NUM_BLOCKS:
-      - 4
-      - 4
-      - 4
+      - 2
+      - 2
+      - 2
       NUM_CHANNELS:
-      - 48
-      - 96
-      - 192
+      - 16
+      - 32
+      - 64
       FUSE_METHOD: SUM
     STAGE4:
-      NUM_MODULES: 3
+      NUM_MODULES: 1
       NUM_BRANCHES: 4
       BLOCK: BASIC
       NUM_BLOCKS:
-      - 4
-      - 4
-      - 4
-      - 4
+      - 2
+      - 2
+      - 2
+      - 2
       NUM_CHANNELS:
-      - 48
-      - 96
-      - 192
-      - 384
+      - 16
+      - 32
+      - 64
+      - 128
       FUSE_METHOD: SUM
 LOSS:
   USE_OHEM: false
@@ -76,18 +76,18 @@ TRAIN:
   - 480
   - 270
   BASE_SIZE: 520
-  BATCH_SIZE_PER_GPU: 2
+  BATCH_SIZE_PER_GPU: 1
   SHUFFLE: true
   BEGIN_EPOCH: 0
   END_EPOCH: 5
-  RESUME: true
+  RESUME: false
   OPTIMIZER: adam
   LR: 0.0001
   WD: 0.0001
   MOMENTUM: 0.9
   NESTEROV: false
   FLIP: true
-  MULTI_SCALE: true
+  MULTI_SCALE: false
   DOWNSAMPLERATE: 1
   IGNORE_LABEL: -1
   SCALE_FACTOR: 16
@@ -96,6 +96,6 @@ TEST:
   - 480
   - 270
   BASE_SIZE: 520
-  BATCH_SIZE_PER_GPU: 2
+  BATCH_SIZE_PER_GPU: 1
   FLIP_TEST: false
   MULTI_SCALE: false

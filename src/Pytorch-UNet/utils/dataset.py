@@ -44,11 +44,9 @@ class BasicDataset(Dataset):
 
         if not isMask:
             img_trans = img_nd / 255
-        else:
-            img_trans, _, _ = remap_experiment1(img_nd)
 
         # HWC to CHW
-        img_trans = img_nd.transpose((2, 0, 1))
+        img_trans = img_trans.transpose((2, 0, 1))
 
         return img_trans
 

@@ -7,6 +7,9 @@ __pycache__/
 *.h5
 *.png
 *.so
+*2SQAGJ0K
+*.pth
+*.tar
 
 # Distribution / packaging
 src/Pytorch-UNet/runs/*

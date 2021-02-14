@@ -33,6 +33,7 @@ from HRNet.lib.core.criterion import CrossEntropy, OhemCrossEntropy
 from HRNet.lib.core.function import train, validate
 from HRNet.lib.utils.modelsummary import get_model_summary
 from HRNet.lib.utils.utils import create_logger, FullModel
+from HRNet.lib.models.seg_hrnet import *
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -73,8 +74,7 @@ def main():
     gpus = list(config.GPUS)
 
     # build model
-    model = eval('models.'+config.MODEL.NAME +
-                 '.get_seg_model')(config)
+    model = get_seg_model(config)
 
     dump_input = torch.rand(
         (1, 3, config.TRAIN.IMAGE_SIZE[1], config.TRAIN.IMAGE_SIZE[0])
@@ -98,18 +98,15 @@ def main():
     val_imgs = [x + dir_img for x in splits["Validation"]]
     val_masks = [x + dir_mask for x in splits["Validation"]]
 
-    train = CaDIS_dataset(train_imgs, train_masks, 0.5)
-    val = CaDIS_dataset(val_imgs, val_masks, 0.5)
+    train_dataset = CaDIS_dataset(train_imgs, train_masks, 0.5)
+    val_dataset = CaDIS_dataset(val_imgs, val_masks, 0.5)
 
-    n_train = len(train)
-    n_val = len(val)
-
-    trainloader = torch.utils.data.DataLoader(train,
+    trainloader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=config.TRAIN.BATCH_SIZE_PER_GPU,
                                                shuffle=True,
                                                num_workers=4,
                                                pin_memory=True)
-    testloader = torch.utils.data.DataLoader(val,
+    testloader = torch.utils.data.DataLoader(val_dataset,
                                              batch_size=config.TEST.BATCH_SIZE_PER_GPU,
                                              shuffle=False,
                                              num_workers=4,
@@ -143,7 +140,7 @@ def main():
     else:
         raise ValueError('Only Support SGD optimizer')
 
-    epoch_iters = np.int(train.__len__() /
+    epoch_iters = np.int(train_dataset.__len__() /
                         config.TRAIN.BATCH_SIZE_PER_GPU / len(gpus))
     best_mIoU = 0
     last_epoch = 0

@@ -22,13 +22,15 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
 import _init_paths
-import models
-import datasets
-from config import config
-from config import update_config
-from core.function import testval, test
-from utils.modelsummary import get_model_summary
-from utils.utils import create_logger, FullModel
+import HRNet.lib.models
+import HRNet.lib.datasets
+from HRNet.lib.config import config
+from HRNet.lib.config import update_config
+from HRNet.lib.core.function import testval, test
+from HRNet.lib.utils.modelsummary import get_model_summary
+from HRNet.lib.utils.utils import create_logger, FullModel
+from HRNet.lib.models.seg_hrnet import *
+from HRNet.lib.datasets.CaDIS import *
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -62,8 +64,7 @@ def main():
     cudnn.enabled = config.CUDNN.ENABLED
 
     # build model
-    model = eval('models.'+config.MODEL.NAME +
-                 '.get_seg_model')(config)
+    model = get_seg_model(config)
 
     dump_input = torch.rand(
         (1, 3, config.TRAIN.IMAGE_SIZE[1], config.TRAIN.IMAGE_SIZE[0])
@@ -91,18 +92,15 @@ def main():
     model = nn.DataParallel(model, device_ids=gpus).cuda()
 
     # prepare data
-    test_size = (config.TEST.IMAGE_SIZE[1], config.TEST.IMAGE_SIZE[0])
-    test_dataset = eval('datasets.'+config.DATASET.DATASET)(
-                        root=config.DATASET.ROOT,
-                        list_path=config.DATASET.TEST_SET,
-                        num_samples=None,
-                        num_classes=config.DATASET.NUM_CLASSES,
-                        multi_scale=False,
-                        flip=False,
-                        ignore_label=config.TRAIN.IGNORE_LABEL,
-                        base_size=config.TEST.BASE_SIZE,
-                        crop_size=test_size,
-                        downsample_rate=1)
+    dir_img = "/Images/*"
+    dir_mask = "/Labels/*"
+
+    # prepare data
+    splits = load_params(config.DATASET.ROOT)
+    test_imgs = [x + dir_img for x in splits["Test"]]
+    test_masks = [x + dir_mask for x in splits["Test"]]
+
+    test_dataset = CaDIS_dataset(test_imgs, test_masks, 0.5)
 
     testloader = torch.utils.data.DataLoader(
         test_dataset,
@@ -116,7 +114,9 @@ def main():
         mean_IoU, IoU_array, pixel_acc, mean_acc = testval(config, 
                                                            test_dataset, 
                                                            testloader, 
-                                                           model)
+                                                           model,
+                                                           sv_dir= r"C:\Users\mauro\OneDrive\Escritorio\MASTER\TFM\TFM_AI\src\HRNet\tools\output\CaDIS\seg_hrnet_CaDIS",
+                                                           sv_pred=True)
     
         msg = 'MeanIU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \
             Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, 
